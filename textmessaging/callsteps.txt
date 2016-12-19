@@ -1,0 +1,15 @@
+
+http://localhost:8080/textmessaging/usermessage?sessionid=9910&phonenumber=818461238&message&usertext=WHOAMI
+
+http://localhost:8080/textmessaging/usermessage?sessionid=1239912&phonenumber=818463238&message&usertext=MEAL
+
+http://localhost:8080/textmessaging/usermessage?sessionid=912&phonenumber=818463238&message&usertext=MEAL
+
+http://localhost:8080/textmessaging/usermessage?sessionid=1239912&phonenumber=818463238&message&usertext=805+Moberly+Lane,Bentonville
+
+http://localhost:8080/textmessaging/usermessage?sessionid=9112&phonenumber=818463238&message&usertext=REGISTER
+
+//TODO
+Handle Use Case for non in DB, REgister, and then order meal all as one session ID
+
+matching donations with spends via text

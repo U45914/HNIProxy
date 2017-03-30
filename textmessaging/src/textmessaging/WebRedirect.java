@@ -1,5 +1,6 @@
 package textmessaging;
 import javax.json.Json;
+
 import javax.json.JsonObject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -12,8 +13,11 @@ import java.net.URLEncoder;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.time.LocalDateTime;
 
 public class WebRedirect {
+	private static String HNI_ORDERALERTURI="https://hooks.slack.com/services/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"; //order-alerts channel on HNI SLACK
+	private static String HNI_VOLUNTEERURI="https://hooks.slack.com/services/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";
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(WebRedirect.class);
     private String FormatJSONResponse(String returnCode,String responseBody){
@@ -37,11 +41,11 @@ public class WebRedirect {
    return jsonvalue.toString();
    }
 
-    public void SendSlackAlert(String msgAlert)
+    public void SendSlackAlert(String slackURI, String msgAlert)
     {
     	try
     	{
-    		String slackURI="https://hooks.slack.com/services/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"; //order-alerts channel on HNI SLACK
+    		
     		//String slackURI="https://hooks.slack.com/services/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"; //testing channel on HNI SLACK
     		Client slackClient=ClientBuilder.newClient();
     		WebTarget slackTarget=slackClient.target(slackURI);
@@ -89,7 +93,13 @@ public class WebRedirect {
 			LOGGER.info("URI-"+targetURI);
 		 	WebTarget hniTarget=hniClient.target(targetURI);
 		 	String hniType;
-		 	boolean normalUser=true;
+		 	boolean holidayBanner=false;
+		 	String InRange="DateIsNOTInRange";
+		 	LocalDateTime holidayStart =LocalDateTime.of(2016,12,24,21,00);		 			
+		 	LocalDateTime holidayEnd = LocalDateTime.of(2016,12,26,6,00);
+		 	LocalDateTime currentTime = LocalDateTime.now();
+		 	if(currentTime.isAfter(holidayStart) && currentTime.isBefore(holidayEnd))
+		 			{holidayBanner=true;}
 		 	//Triggers for testing users to get around launch prompts
 		 	//if(authkey!=null){if(authkey.equals("99")){normalUser=false;}}
 		 	//if(phoneNumber!=null){
@@ -97,40 +107,52 @@ public class WebRedirect {
 		// 		{ normalUser=false;}
 		// 	}
 		 	
-		// 	if (normalUser)
-		// 	{
-		//	 	 hniReturnCode="200";
-		//	 	 hniReturnMessage="Sorry. The launch date for the Hunger Not Impossible Program has been delayed until 12/3/16. Please try again then. ";
-		//	  }
-		// 	else
-		// 	{		 		
-		 	switch(userMessage.toUpperCase())
-		 	 {  		 		
-		 		case "MEAL":
-		 		case "ORDER":
-		 			SendSlackAlert("A Meal order has been started.");		 			
-		 			break;
-		 		case "CONFIRM":
-		 			SendSlackAlert("A Meal has been confirmed.");		 			
-		 			break;
-		 		
-		 		default:		 			
-				 	break;	
-		 	}
-		 	hniType=MediaType.TEXT_PLAIN;
-			Response hniResponse=hniTarget.request(hniType).get();
-		     
-		    hniReturnCode=String.valueOf(hniResponse.getStatus());
-		    
-		    hniReturnMessage =hniResponse.readEntity(String.class);	
-		    //Workaround for the 404 on register your phone error from meal workflow 
-		    if(hniReturnCode.equals("404") && hniReturnMessage !=null) {hniReturnCode="200";}
-			//StringReader hniStringReader = new StringReader(hniTarget.request(MediaType.TEXT_PLAIN).get(String.class));   
-			//hniReturnMessage= IOUtils.toString(hniStringReader);
-			LOGGER.info("ReturnStatus-"+ hniReturnCode);
-			LOGGER.info("ReturnMessage-"+hniReturnMessage);
-		 //	}
+		 	if (holidayBanner) 
+		 	{
+			 	 hniReturnCode="200";
+			 	 hniReturnMessage="Happy Holidays. The system is not currently accepting orders because of our provider holiday schedules. Please retry on December 27.";
+			 	 SendSlackAlert(HNI_ORDERALERTURI,"Holiday Message Sent.");
+			 	 LOGGER.info("Holiday Message");     
+		
+			  }
+		 	else
+		 	{	
+		 	if(userMessage!=null)
+		 		{	
+			 	switch(userMessage.toUpperCase())
+			 	 { 			 		    
+			 		case "MEAL":
+			 		case "ORDER":		 			
+			 			SendSlackAlert(HNI_ORDERALERTURI,"A Meal order has been started.");		 			
+			 			break;
+			 		case "CONFIRM":
+			 			SendSlackAlert(HNI_ORDERALERTURI,"A Meal has been confirmed.");		 			
+			 			SendSlackAlert(HNI_VOLUNTEERURI,"We have an order ready to be processed!");
+			 			break;			 		
+			 		default:		 			
+					 	break;	
+			 	}
+			 	hniType=MediaType.TEXT_PLAIN;
+				Response hniResponse=hniTarget.request(hniType).get();
+			     
+			    hniReturnCode=String.valueOf(hniResponse.getStatus());
+			    
+			    hniReturnMessage =hniResponse.readEntity(String.class);	
+			    //Workaround for the 404 on register your phone error from meal workflow 
+			    if(hniReturnCode.equals("404") && hniReturnMessage !=null) {hniReturnCode="200";}
+				//StringReader hniStringReader = new StringReader(hniTarget.request(MediaType.TEXT_PLAIN).get(String.class));   
+				//hniReturnMessage= IOUtils.toString(hniStringReader);
+				LOGGER.info("ReturnStatus-"+ hniReturnCode);
+				LOGGER.info("ReturnMessage-"+hniReturnMessage);
+			 	}
 		 	
+		 	else
+		 	{
+		 		LOGGER.error("Null UserText");
+		 		hniReturnCode="500";
+		 		hniReturnMessage="UserText was not Provided";
+		 	}
+		 }
 		 }	
 	catch (Exception e)
 	{
